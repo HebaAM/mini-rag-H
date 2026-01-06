@@ -17,6 +17,10 @@ $ conda create -n mini-rag python=3.8
 ```bash
 $ conda activate mini-rag
 ```
+or 
+```bash
+$ source .venv/bin/activate
+```
 
 ### (Optional) Setup you command line interface for better readability
 
