@@ -32,7 +32,7 @@ class DataController(BaseController):
 
         return cleaned_filename 
         
-    def create_unique_filename(self, original_filename: str, project_id: str) -> str:
+    def create_unique_file_path(self, original_filename: str, project_id: str) -> str:
         random_filename = self.generate_random_string()
 
         #Get folder where the file is stored
@@ -46,21 +46,6 @@ class DataController(BaseController):
             random_filename = self.generate_random_string()
             unique_filename = os.path.join(project_path, random_filename + '_' + cleaned_filename)
 
-        return unique_filename
-
-
-
-
-
-
-
-# removes everything except: letters (including Unicode), digits, underscore, and dot
-
-        name, ext = os.path.splitext(original_filename)
-        safe_name = ''.join(c for c in name if c.isalnum() or c in ('_', '.')).rstrip()
-        random_str = self.generate_random_string(8)
-        unique_filename = f"{safe_name}_{random_str}{ext}"
-        return unique_filename
-
+        return unique_filename, random_filename + '_' + cleaned_filename
 
 

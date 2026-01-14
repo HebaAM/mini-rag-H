@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, UploadFile, status
 from fastapi.responses import JSONResponse
 from helpers.config import get_settings, Settings
-from controllers import DataController, ProjectController
+from controllers import DataController, ProjectController, ProcessController
 import os
 from models import ResponseStatus
 import aiofiles
 import logging
+from .schemas import ProcessRequest
 
 logger = logging.getLogger('uvicorn.error')
 
@@ -31,7 +32,7 @@ async def upload_data(project_id: str, file: UploadFile, app_settings: Settings=
     # saved_file_path = os.path.join(project_folder_path, file.filename)
 
     # Get unique file path instead   
-    saved_file_path = data_controller.create_unique_filename(original_filename=file.filename, project_id=project_id)
+    saved_file_path, file_id = data_controller.create_unique_file_path(original_filename=file.filename, project_id=project_id)
     
     # Save the uploaded file asynchronously
     # Wrap in try-except for better error handling in production code
@@ -44,5 +45,25 @@ async def upload_data(project_id: str, file: UploadFile, app_settings: Settings=
         return JSONResponse(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                             content={"msg": ResponseStatus.FILE_UPLOAD_FAILED.value + f" Error: {str(e)}"})
 
-    return JSONResponse(content={"msg": ResponseStatus.FILE_UPLOAD_SUCCESS.value})
+    return JSONResponse(content={"msg": ResponseStatus.FILE_UPLOAD_SUCCESS.value, 'file_id': file_id})
 
+
+@data_router.post("/process/{project_id}")
+async def process_data(project_id: str, process_request: ProcessRequest):
+    
+    file_id = process_request.file_id
+    process_controller = ProcessController(project_id=project_id)
+
+    file_content = process_controller.get_file_content(file_id=file_id)
+
+    file_chunks = process_controller.split_file_content(file_content=file_content, 
+                                                    file_id=file_id,
+                                                    chunk_size=process_request.chunk_size,
+                                                    overlap_size=process_request.overlap_size)
+    
+    if file_chunks is None or len(file_chunks) == 0:
+        return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST,
+                            content={"msg": ResponseStatus.PROCESSING_FAILED.value +
+                                    " No content extracted from file."})
+
+    return file_chunks
